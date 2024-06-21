@@ -13,6 +13,9 @@ usage() {
         echo "-i <fasta_path>         Path to a FASTA file containing query sequence(s)"
 
         echo "Optional Parameters:"
+        echo "-Y <common_chain_desc>  Description of Saved Chain in fasta file (default: 'None')"
+        echo "-Z <common_chain_path>  Path of Saved Chain (default: 'None')"
+        echo "-h <half_job>           Makes uniprot_hits.sto file needed for multi-stage folding"
         echo "-t <max_template_date>  Maximum template release date to consider (YYYY-MM-DD format). (default: 2020-12-01)"
         echo "-b <benchmark>          Run multiple JAX model evaluations to obtain a timing that excludes the compilation time (default: 'False')"
         echo "-g <use_gpu>            Enable NVIDIA runtime to run with GPUs (default: 'True')"
@@ -33,7 +36,7 @@ usage() {
         exit 1
 }
 
-while getopts ":d:o:p:i:t:u:c:m:R:r:bgvsqfG" i; do
+while getopts ":d:o:p:i:t:u:c:m:R:r:b:Y:Z:gvsqfhG" i; do
         case "${i}" in
         d)
                 data_dir=$OPTARG
@@ -86,12 +89,33 @@ while getopts ":d:o:p:i:t:u:c:m:R:r:bgvsqfG" i; do
         G)
                 use_gpu_relax=false
         ;;
+        h)
+                half_job=true
+        ;;
+        Y)
+                common_chain_desc=$OPTARG
+        ;;
+        Z)
+                common_chain_path=$OPTARG
+        ;;
         esac
 done
 
 # Parse input and set defaults
 if [[ "$data_dir" == "" || "$output_dir" == "" || "$model_preset" == "" || "$fasta_path" == "" ]] ; then
     usage
+fi
+
+if [[ "$half_job" == "" ]] ; then
+    half_job=false
+fi
+
+if [[ "$common_chain_desc" == "" ]] ; then
+    common_chain_desc=none
+fi
+
+if [[ "$common_chain_path" == "" ]] ; then
+    common_chain_path=none
 fi
 
 if [[ "$max_template_date" == "" ]] ; then
@@ -173,7 +197,7 @@ export XLA_PYTHON_CLIENT_MEM_FRACTION='4.0'
 parameter_path="$data_dir/params"
 bfd_database_path="$data_dir/bfd/bfd_metaclust_clu_complete_id30_c90_final_seq.sorted_opt"
 small_bfd_database_path="$data_dir/small_bfd/bfd-first_non_consensus_sequences.fasta"
-mgnify_database_path="$data_dir/mgnify/mgy_clusters_2018_12.fa"
+mgnify_database_path="$data_dir/mgnify/mgy_clusters_2022_05.fa"
 template_mmcif_dir="$data_dir/pdb_mmcif/mmcif_files"
 obsolete_pdbs_path="$data_dir/pdb_mmcif/obsolete.dat"
 pdb70_database_path="$data_dir/pdb70/pdb70"
@@ -217,6 +241,8 @@ python $alphafold_script \
 --model_names=$model_selection \
 --parameter_path=$parameter_path \
 --output_dir=$output_dir \
+--common_chain_desc=$common_chain_desc \
+--common_chain_path=$common_chain_path \
 --jackhmmer_binary_path=$jackhmmer_binary_path \
 --hhblits_binary_path=$hhblits_binary_path \
 --hhsearch_binary_path=$hhsearch_binary_path \
@@ -241,4 +267,6 @@ python $alphafold_script \
 --use_gpu_relax=$use_gpu_relax \
 --recycling=$recycling \
 --run_feature=$run_feature \
---logtostderr
+--half_job=$half_job \
+--logtostderr \
+--use_precomputed_msas=true

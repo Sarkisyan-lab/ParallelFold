@@ -175,7 +175,10 @@ class DataPipeline:
                jackhmmer_binary_path: str,
                uniprot_database_path: str,
                max_uniprot_hits: int = 50000,
-               use_precomputed_msas: bool = False):
+               use_precomputed_msas: bool = False,
+               half_job: bool = False,
+               common_chain_desc: str = None,
+               common_chain_path: str = None):
     """Initializes the data pipeline.
 
     Args:
@@ -193,6 +196,9 @@ class DataPipeline:
         database_path=uniprot_database_path)
     self._max_uniprot_hits = max_uniprot_hits
     self.use_precomputed_msas = use_precomputed_msas
+    self.half_job = half_job
+    self.common_chain_desc = common_chain_desc
+    self.common_chain_path = common_chain_path
 
   def _process_single_chain(
       self,
@@ -255,12 +261,23 @@ class DataPipeline:
 
     all_chain_features = {}
     sequence_features = {}
-    is_homomer_or_monomer = len(set(input_seqs)) == 1
+
+    if self.half_job:
+      is_homomer_or_monomer = False
+    else:
+      is_homomer_or_monomer = len(set(input_seqs)) == 1
+    
     for chain_id, fasta_chain in chain_id_map.items():
       if fasta_chain.sequence in sequence_features:
         all_chain_features[chain_id] = copy.deepcopy(
             sequence_features[fasta_chain.sequence])
         continue
+      if self.common_chain_desc and self.common_chain_desc in fasta_chain.description:
+        if os.path.isdir(self.common_chain_path):
+          msa_output_dir = self.common_chain_path
+        else:
+          print(f"Common chain path not found; Path: {self.common_chain_path}")
+      
       chain_features = self._process_single_chain(
           chain_id=chain_id,
           sequence=fasta_chain.sequence,

@@ -62,6 +62,12 @@ flags.DEFINE_list('model_names', None, 'Names of models to use.')
 flags.DEFINE_string('parameter_path', None, 'Path to directory of supporting data.')
 flags.DEFINE_string('output_dir', None, 'Path to a directory that will '
                     'store the results.')
+flags.DEFINE_boolean('half_job', False, 'Whether the Job is a part of Multi-stage'
+                    'Folding task')
+flags.DEFINE_string('common_chain_desc', None, 'Description of the Common chain '
+                    'written in fasta file.')
+flags.DEFINE_string('common_chain_path', None, 'Path to a directory that '
+                    'store the common chain.')
 flags.DEFINE_string('jackhmmer_binary_path', shutil.which('jackhmmer'),
                     'Path to the JackHMMER executable.')
 flags.DEFINE_string('hhblits_binary_path', shutil.which('hhblits'),
@@ -417,7 +423,10 @@ def main(argv):
         monomer_data_pipeline=monomer_data_pipeline,
         jackhmmer_binary_path=FLAGS.jackhmmer_binary_path,
         uniprot_database_path=FLAGS.uniprot_database_path,
-        use_precomputed_msas=FLAGS.use_precomputed_msas)
+        use_precomputed_msas=FLAGS.use_precomputed_msas,
+        half_job=FLAGS.half_job,
+        common_chain_desc=FLAGS.common_chain_desc,
+        common_chain_path=FLAGS.common_chain_path)
   else:
     num_predictions_per_model = 1
     data_pipeline = monomer_data_pipeline
